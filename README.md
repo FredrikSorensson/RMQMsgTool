@@ -25,7 +25,8 @@ with the script in the current directory.
 
 ## Browsing capabilities
 
-Note on browsing: The tool performs browsing using a simple trick. It
+Note on browsing: The tool performs browsing, that is reading messages 
+without removing them from the queue, using a simple trick. It
 starts a transaction before reading the first message, keeps the 
 transaction open, and then, when the entire queue is read or the
 user clicks on "End Browse", the tool does an tx_rollback, meaning
