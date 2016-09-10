@@ -1,0 +1,34 @@
+README:
+
+Plan:
+
+Steg 1
++ Kunna läsa ett meddelande från kö.
++ Kunna skriva meddelande till exchange/kö via default exchange.
++ Kunna browsa meddelande från kö (Start browse, Browse next)
++ Kunna spara meddelande till disk
+- Bättre felhantering
+
+Steg 2
++ Kunna presentera i XML
++ Kunna presentera i JSON
++ Kunna presentera i HEXDUMP
+
+Steg 3
++ Kunna läsa headrar
++ Kunna skriva headrar
++ Kuna skriva headrar fancy
++ Kunna spara med headrar (zippat format, JSON för header och BIN kropp med nullkompression?)
++ Kunna läsa med headrar
+
+---- Annat program
+
+Steg 4
+- Kunna bulkspara
+- Kunna bulkspara från browse
+- Kunna bulkladda
+
+Steg 5
+- Kunna kopiera
+- Kunna kopiera med filter
+- Kunna kopiera med filter och browse 
