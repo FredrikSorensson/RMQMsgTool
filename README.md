@@ -1,8 +1,12 @@
 # RMQMsgTool
 A simple GUI to read and write RMQ messages.
 
+## Introduction
+
 This is a simple GUI to read, browse and write messages to RabbitMQ. 
 It is very simple and not very resilient, but may prove useful
+
+## Installaion
 
 It should start on a fairly basic installation of Python, but it
 needs the "pika" RabbitMQ client librara. In most cases, an
@@ -11,6 +15,15 @@ needs the "pika" RabbitMQ client librara. In most cases, an
   
   
 should do the trick.
+
+After that, it should start in the normal way you execute pyhton scripts
+on your platform. On linux, do
+
+ > ./rmqmsgtool.py 
+ 
+with the script in the current directory.
+
+## Browsing capabilities
 
 Note on browsing: The tool performs browsing using a simple trick. It
 starts a transaction before reading the first message, keeps the 
