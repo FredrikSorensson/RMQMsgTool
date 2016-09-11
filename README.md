@@ -6,7 +6,7 @@ A simple GUI to read and write RMQ messages.
 This is a simple GUI to read, browse and write messages to RabbitMQ. 
 It is very simple and not very resilient, but may prove useful
 
-## Installaion
+## Installation
 
 It should start on a fairly basic installation of Python, but it
 needs the "pika" RabbitMQ client librara. In most cases, an
@@ -23,7 +23,17 @@ on your platform. On linux, do
  
 with the script in the current directory.
 
-## Browsing capabilities
+## The GUI
+
+The GUI is divided in 5 parts:
+
+- Connection details - Here is where you tell what queuemanager to connect to
+- Message header - Here is where you configure the message header details
+- Message body - Here is where the message body is presented
+- Actions - The actions that can be performed 
+- Results - A log window of actions performed
+
+## Browsing caveats
 
 Note on browsing: The tool performs browsing, that is reading messages 
 without removing them from the queue, using a simple trick. It

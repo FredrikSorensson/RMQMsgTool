@@ -80,7 +80,7 @@ class MainWindow:
 		self.body = ''	
 		vcmd = (master.register(self.valNum), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
 		
-		# User interface setup starts here
+		# User interface setup starts heretest
 		#
 		# connectFrame with connection details
 		self.connectFrame = LabelFrame(master, text = "Connection details", width=150)
@@ -394,7 +394,7 @@ class MainWindow:
 			self.channel.close()
 			self.getConnection.close()
 
-			self.addResult("Browsed message (%d bytes), %d left in queue\n" % ( len(self.body), self.method_frame.message_count) )	
+			self.addResult("Got message (%d bytes), %d left in queue\n" % ( len(self.body), self.method_frame.message_count) )	
 		else:
 			self.addResult("Could not get message from queue, queue empty?\n")
 		
