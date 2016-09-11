@@ -17,15 +17,16 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import ast
-import pika
 from Tkinter import *
-import tkFileDialog
-import xml.dom.minidom
+
+import ast
 import json
 import os.path
-import zipfile
+import pika
 import time
+import tkFileDialog
+import xml.dom.minidom
+import zipfile
 
 
 FILTER=''.join([(len(repr(chr(x)))==3) and chr(x) or '.' for x in range(256)])
@@ -40,68 +41,33 @@ def hexdump2(src):
 		printable = s1.translate(FILTER)
 		result.append("%08X   %-*s   %s\n" % (i, 16*3+4, hexa, printable))
 	return ''.join(result)
-	
+
+
+PROPERTIES=['content_type','content_encoding','priority','correlation_id','reply_to','expiration','message_id','timestamp','type',
+	'user_id','app_id','cluster_id','delivery_mode']
 def basProp2jsonStr( inBasProp ):
 	myJson = {}
-	if inBasProp.content_type:
-		myJson['content_type'] = inBasProp.content_type
-	if inBasProp.delivery_mode:
-		myJson['delivery_mode'] = inBasProp.delivery_mode
-	if inBasProp.content_encoding:
-		myJson['content_encoding'] = inBasProp.content_encoding
-	if inBasProp.priority:
-		myJson['priority'] = inBasProp.priority
-	if inBasProp.correlation_id:
-		myJson['correlation_id'] = inBasProp.correlation_id
-	if inBasProp.reply_to:
-		myJson['reply_to'] = inBasProp.reply_to
-	if inBasProp.expiration:
-		myJson['expiration'] = inBasProp.expiration
-	if inBasProp.message_id:
-		myJson['message_id'] = inBasProp.message_id
-	if inBasProp.timestamp:
-		myJson['timestamp'] = inBasProp.timestamp
-	if inBasProp.type:
-		myJson['type'] = inBasProp.type
-	if inBasProp.user_id:
-		myJson['user_id'] = inBasProp.user_id
-	if inBasProp.app_id:
-		myJson['app_id'] = inBasProp.app_id
-	if inBasProp.cluster_id:
-		myJson['cluster_id'] = inBasProp.cluster_id
+	for key in PROPERTIES:
+		if hasattr (inBasProp, key):
+			myJson[key] = getattr (inBasProp, key)
 	return json.dumps(myJson)
 
 def jsonStr2BasProp( inJson ):
 	myBasProp = pika.BasicProperties()
 	myJson = json.loads(inJson)
-	if 'content_type' in myJson:
-		myBasProp.content_type = myJson['content_type'] 
-	if 'delivery_mode' in myJson:
-		myBasProp.delivery_mode = myJson['delivery_mode']
-	if 'content_encoding' in myJson :
-		myBasProp.content_encoding = myJson['content_encoding']
-	if 'priority' in myJson :
-		myBasProp.priority = myJson['priority']
-	if 'correlation_id' in myJson :
-		myBasProp.correlation_id = myJson['correlation_id']
-	if 'reply_to' in myJson :
-		myBasProp.reply_to = myJson['reply_to']
-	if 'expiration' in myJson:
-		myBasProp.expiration = myJson['expiration']
-	if 'message_id' in myJson:
-		myBasProp.message_id = myJson['message_id']
-	if 'timestamp' in myJson:
-		myBasProp.timestamp = myJson['timestamp']
-	if 'type' in myJson:
-		myBasProp.type = myJson['type']
-	if 'user_id' in myJson:
-		myBasProp.user_id = myJson['user_id']
-	if 'app_id' in myJson:
-		myBasProp.app_id = myJson['app_id']
-	if 'cluster_id' in myJson:
-		myBasProp.cluster_id = myJson['cluster_id']
-	return myBasProp
-	
+	for key in PROPERTIES:
+		if key in myJson:
+			setattr (myBasProp, key, myJson[key] )
+	return myBasProp	
+
+def entryWithLabel(inParent, text, lwidth, ewidth, row, column, defval):
+	myLabel = Label(inParent, text = text, width = lwidth, anchor=W)
+	myLabel.grid(row = row, column = column, sticky=W)
+	myEntry = Entry(inParent, width= ewidth )
+	myEntry.grid( row=row, column=column+1, sticky=W)
+	myEntry.insert(END, defval)
+	return myEntry
+
 class MainWindow:
 
 	def __init__(self, master):
@@ -109,139 +75,54 @@ class MainWindow:
 		# Here we set up the main window
 		master.title("RMQMsgTool v0.1")
 
-		# Unnecessary definitions, because I like it
+		# Pre-defines
 		self.properties = pika.BasicProperties()
 		self.body = ''	
+		vcmd = (master.register(self.valNum), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
 		
 		# User interface setup starts here
 		#
 		# connectFrame with connection details
 		self.connectFrame = LabelFrame(master, text = "Connection details", width=150)
 		self.connectFrame.grid(row = 0, sticky = W+E)
-
 		# Row 0
-		# Host
-		self.hostLabel = Label(self.connectFrame, text = "Host", width = 10, anchor="w")
-		self.hostLabel.grid(row = 0, column = 0)
-		self.hostEntry = Entry(self.connectFrame, width= 30 )
-		self.hostEntry.grid( row=0, column=1, sticky=W)
-		self.hostEntry.insert(END, '127.0.0.1')
+		self.hostEntry = entryWithLabel(self.connectFrame, "Host", 10, 30, 0, 0, '127.0.0.1')
 		self.hostEntry.focus()
-
-		# Port
-		self.portLabel = Label(self.connectFrame, text = "Port", width = 10, anchor="w")
-		self.portLabel.grid( row=0, column=2)
-		self.portEntry = Entry(self.connectFrame, width= 10 )
-		self.portEntry.insert(END, '5672')
-		self.portEntry.grid( row=0, column=3, sticky=W)
-
-		# Vhost
-		self.vhostLabel = Label(self.connectFrame, text = "Vhost", width = 10, anchor="w")
-		self.vhostLabel.grid( row=0, column=4)
-		self.vhostEntry = Entry(self.connectFrame, width= 30 )
-		self.vhostEntry.insert (END, '/')
-		self.vhostEntry.grid( row=0, column=5, sticky=W)
-
+		self.portEntry = entryWithLabel(self.connectFrame, "Port", 10, 30, 0, 2, '5672')
+		self.portEntry.config(validate = 'key', validatecommand = vcmd)
+		self.vhostEntry = entryWithLabel(self.connectFrame, "Vhost", 10, 30, 0, 4, '/')
 		# Row 1
-		# Username
-		self.userLabel = Label(self.connectFrame, text = "Username", width = 10, anchor="w")
-		self.userLabel.grid( row=1, column = 0)
-		self.userEntry = Entry(self.connectFrame, width= 20 )
-		self.userEntry.insert (END, 'guest')
-		self.userEntry.grid( row=1, column = 1, sticky=W)
-
-		# Password
-		self.pwdLabel = Label(self.connectFrame, text = "Password", width = 10, anchor="w")
-		self.pwdLabel.grid( row=1, column = 2)
-		self.pwdEntry = Entry(self.connectFrame, width= 20 )
-		self.pwdEntry.insert (END, 'guest')
-		self.pwdEntry.grid( row=1, column = 3, sticky=W)
-
+		self.userEntry = entryWithLabel(self.connectFrame, "Username", 10, 20, 1, 0, 'guest')
+		self.pwdEntry = entryWithLabel(self.connectFrame, "Password", 10, 20, 1, 2, 'guest')
 		# Row 2
 		# Queuename
-		self.queueLabel = Label(self.connectFrame, text = "Queue", width = 10, anchor="w")
-		self.queueLabel.grid( row=2, column = 0)
-		self.queueEntry = Entry(self.connectFrame, width= 30 )
-		self.queueEntry.insert (END, 'test')
-		self.queueEntry.grid( row=2, column = 1, sticky=W)
-
-		#    content_type
-		#    content_encoding
-		#    priority
-
+		self.queueEntry = entryWithLabel(self.connectFrame, "Username", 10, 20, 2, 0, 'test')
+		self.exchangeEntry = entryWithLabel(self.connectFrame, "Exchange", 10, 20, 2, 2, '')
+		self.routingKeyEntry = entryWithLabel(self.connectFrame, "Routing key", 10, 20, 2, 4, 'test')
 
 		# headerFrame with the message header stuff
 		self.headerFrame = LabelFrame(master, text = "Message header")
 		self.headerFrame.grid(row = 1, sticky=W+E)
 
-		# Row 0
-		self.cthLabel = Label(self.headerFrame, text = "content_type", width = 15, anchor="w")
-		self.cthLabel.grid(row = 0, column = 0)
-		self.cthEntry = Entry(self.headerFrame, width = 20 )
-		self.cthEntry.grid(row = 0, column = 1, sticky=W)
-		self.cehLabel = Label(self.headerFrame, text = "content_encoding", width = 15, anchor="w")
-		self.cehLabel.grid(row = 0, column = 2)
-		self.cehEntry = Entry(self.headerFrame, width = 20 )
-		self.cehEntry.grid(row = 0, column = 3, sticky=W)
-		self.prhLabel = Label(self.headerFrame, text = "priority", width = 15, anchor="w")
-		self.prhLabel.grid(row = 0, column = 4)
-		self.prhEntry = Entry(self.headerFrame, width = 20 )
-		self.prhEntry.grid(row = 0, column = 5, sticky=W)
-
-		#    correlation_id
-		#    reply_to
-		#    expiration
-
-		# Row 1
-		self.cohLabel = Label(self.headerFrame, text = "correlation_id", width = 15, anchor="w")
-		self.cohLabel.grid(row = 1, column = 0)
-		self.cohEntry = Entry(self.headerFrame, width = 20 )
-		self.cohEntry.grid(row = 1, column = 1, sticky=W)
-		self.rthLabel = Label(self.headerFrame, text = "reply_to", width = 15, anchor="w")
-		self.rthLabel.grid(row = 1, column = 2)
-		self.rthEntry = Entry(self.headerFrame, width = 20 )
-		self.rthEntry.grid(row = 1, column = 3, sticky=W)
-		self.exhLabel = Label(self.headerFrame, text = "expiration", width = 15, anchor="w")
-		self.exhLabel.grid(row = 1, column = 4)
-		self.exhEntry = Entry(self.headerFrame, width = 20 )
-		self.exhEntry.grid(row = 1, column = 5, sticky=W)
-
-		#    message_id
-		#    timestamp
-		#    type
-		
-		# Row 2
-		self.mihLabel = Label(self.headerFrame, text = "message_id", width = 15, anchor="w")
-		self.mihLabel.grid(row = 2, column = 0)
-		self.mihEntry = Entry(self.headerFrame, width = 20 )
-		self.mihEntry.grid(row = 2, column = 1, sticky=W)
-		self.tshLabel = Label(self.headerFrame, text = "timestamp", width = 15, anchor="w")
-		self.tshLabel.grid(row = 2, column = 2)
-		self.tshEntry = Entry(self.headerFrame, width = 20 )
-		self.tshEntry.grid(row = 2, column = 3, sticky=W)
-		self.tyhLabel = Label(self.headerFrame, text = "type", width = 15, anchor="w")
-		self.tyhLabel.grid(row = 2, column = 4)
-		self.tyhEntry = Entry(self.headerFrame, width = 20 )
-		self.tyhEntry.grid(row = 2, column = 5, sticky=W)
-
-		#    user_id
-		#    app_id
-		#    cluster_id		
-
-		# Row 3
-		self.uihLabel = Label(self.headerFrame, text = "user_id", width = 15, anchor="w")
-		self.uihLabel.grid(row = 3, column = 0)
-		self.uihEntry = Entry(self.headerFrame, width = 20 )
-		self.uihEntry.grid(row = 3, column = 1, sticky=W)
-		self.aihLabel = Label(self.headerFrame, text = "app_id", width = 15, anchor="w")
-		self.aihLabel.grid(row = 3, column = 2)
-		self.aihEntry = Entry(self.headerFrame, width = 20 )
-		self.aihEntry.grid(row = 3, column = 3, sticky=W)
-		self.cihLabel = Label(self.headerFrame, text = "cluster_id", width = 15, anchor="w")
-		self.cihLabel.grid(row = 3, column = 4)
-		self.cihEntry = Entry(self.headerFrame, width = 20 )
-		self.cihEntry.grid(row = 3, column = 5, sticky=W)
-
+		# Button row 0
+		self.cthEntry = entryWithLabel(self.headerFrame, "content_type", 15, 20, 0, 0, '')
+		self.cehEntry = entryWithLabel(self.headerFrame, "content_encoding", 15, 20, 0, 2, '')
+		self.prhEntry = entryWithLabel(self.headerFrame, "priority", 15, 20, 0, 4, '')
+		self.prhEntry.config(validate = 'key', validatecommand = vcmd)
+		# Button row 1
+		self.cohEntry = entryWithLabel(self.headerFrame, "correlation_id", 15, 20, 1, 0, '')
+		self.rthEntry = entryWithLabel(self.headerFrame, "reply_to", 15, 20, 1, 2, '')
+		self.exhEntry = entryWithLabel(self.headerFrame, "expiration", 15, 20, 1, 4, '')
+		self.exhEntry.config(validate = 'key', validatecommand = vcmd)
+		# Button row 2
+		self.mihEntry = entryWithLabel(self.headerFrame, "message_id", 15, 20, 2, 0, '')
+		self.tshEntry = entryWithLabel(self.headerFrame, "timestamp", 15, 20, 2, 2, '')
+		self.tshEntry.config(validate = 'key', validatecommand = vcmd)
+		self.tyhEntry = entryWithLabel(self.headerFrame, "type", 15, 20, 2, 4, '')
+		# Button row 3
+		self.uihEntry = entryWithLabel(self.headerFrame, "user_id", 15, 20, 3, 0, '')
+		self.aihEntry = entryWithLabel(self.headerFrame, "app_id", 15, 20, 3, 2, '')
+		self.cihEntry = entryWithLabel(self.headerFrame, "cluster_id", 15, 20, 3, 4, '')
 		# Row 4
 		self.dmhLabel = Label(self.headerFrame, text = "delivery_mode", width = 15, anchor="w")
 		self.dmhLabel.grid(row = 4, column = 0)
@@ -320,19 +201,19 @@ class MainWindow:
 		#
 		# User Interface setup stops here
 
-
-	# Presentation 
-	#
-	# Add a line to the result log
-	def addResult(self, message):
-			self.resultField.config(state=NORMAL)
-			self.resultField.insert(END, message)
-			self.resultField.see(END)
-			self.resultField.config(state=DISABLED)		
-
+	def valNum(self, action, index, value_if_allowed, prior_value, text, validation_type, trigger_type, widget_name):
+		if(action=='1'):
+			if text in '0123456789':
+				return True
+			else:
+				return False
+		else:
+			return True	
+		
+		
 	# Ugly header management
 	#
-	# Set
+	# Set the header fields from the buffered properties field
 	def setHeader(self):
 		self.headerField.config(state=NORMAL)
 		self.headerField.delete(1.0, END)
@@ -391,7 +272,7 @@ class MainWindow:
 		if self.properties.delivery_mode:
 			self.dmhVar.set(self.dmhChoices[self.properties.delivery_mode -1])
 			
-	# Sync the header with the buffer
+	# Sync the properties buffer from the fields
 	def updateHeader(self):
 
 		self.properties.content_type = None
@@ -446,6 +327,15 @@ class MainWindow:
 		if self.dmhVar.get():
 			dm = self.dmhVar.get()
 			self.properties.delivery_mode = int(dm[0:1])
+
+	# Presentation 
+	#
+	# Add a line to the result log
+	def addResult(self, message):
+			self.resultField.config(state=NORMAL)
+			self.resultField.insert(END, message)
+			self.resultField.see(END)
+			self.resultField.config(state=DISABLED)		
 			
 	# Present the body
 	def setBody(self):
@@ -586,8 +476,8 @@ class MainWindow:
 		self.channel = self.getConnection.channel()
 		self.updateHeader()
 
-		# Do the publish using the default exchange
-		self.channel.basic_publish(exchange="", routing_key=self.queueEntry.get(), body = self.body, properties = self.properties )
+		# Publish to what's configured
+		self.channel.basic_publish(exchange=self.exchangeEntry.get(), routing_key=self.routingKeyEntry.get(), body = self.body, properties = self.properties )
 		self.channel.close()
 		self.getConnection.close()
 		self.addResult("Message posted (%d bytes).\n" % len(self.body) )
@@ -600,22 +490,27 @@ class MainWindow:
 			if zipfile.is_zipfile(self.filename):
 				# We load zipfile
 				with zipfile.ZipFile(self.filename, 'r') as self.zf:
-					self.body = self.zf.read('body')
-					self.properties = pika.BasicProperties()
-					self.properties = jsonStr2BasProp(self.zf.read('properties'))	
-					self.properties.headers = ast.literal_eval(self.zf.read('headers'))
-					self.addResult("File %s read (%d bytes) with message headers.\n" % (self.filename, len(self.body) ) )
-
+					self.zfList = self.zf.namelist()
+					if 'RMQToolVer' in self.zfList:
+						self.body = self.zf.read('body')
+						self.properties = jsonStr2BasProp(self.zf.read('properties'))	
+						self.properties.headers = ast.literal_eval(self.zf.read('headers'))
+						self.addResult("File %s read (%d bytes) with message headers.\n" % (self.filename, len(self.body) ) )
+					else:
+						# It is a ZIP file but doesn't have any magic marker, so load it as a file
+						with open(self.filename, mode='rb') as file: 
+							self.body = file.read()
+						self.properties = pika.BasicProperties()
+						self.addResult("File %s read (%d bytes).\n" % (self.filename, len(self.body) ) )
 			# We load regular file
 			else:
 				with open(self.filename, mode='rb') as file: 
 					self.body = file.read()
-				self.properties = pika.BasicProperties()
+				self.properties = pika.BasicProperties()	
 				self.addResult("File %s read (%d bytes).\n" % (self.filename, len(self.body) ) )
-
-			# And we update the presentation
 			self.setHeader()
-			self.setBody()
+			self.setBody()				
+
 		else:	
 			self.addResult("File not read.\n")
 		
@@ -628,8 +523,7 @@ class MainWindow:
 				file.write(self.body)
 			self.addResult("File %s written (%d bytes).\n" % (self.filename, len(self.body) ) )
 		else:	
-			self.addResult("File not saved.\n")
-		
+			self.addResult("File not saved.\n")		
 
 	# Save Message
 	def onSaveMessage(self):
@@ -640,14 +534,11 @@ class MainWindow:
 			self.zf.writestr('properties', basProp2jsonStr (self.properties))
 			self.zf.writestr('headers', str(self.properties.headers) )
 			self.zf.writestr('body', self.body)
+			self.zf.writestr('RMQToolVer', 'v1.0') 
 			self.zf.close()
 			self.addResult("File %s written (%d bytes in body).\n" % (self.filename, len(self.body) ) )
 		else:	
 			self.addResult("File note saved.\n")
-
-	# Test
-	def onTest(self):
-		print self.properties
 
 	# Clear
 	def onClear(self):
@@ -656,12 +547,10 @@ class MainWindow:
 		self.body = ''
 		self.setBody()	
 		self.addResult("Cleared all data.\n")
-		
+
 			
 # Main is here
-
 root = Tk()
 app = MainWindow(root)
 root.mainloop()
 root.destroy() # optional; see description below
-
