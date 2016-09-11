@@ -96,7 +96,7 @@ class MainWindow:
 		self.pwdEntry = entryWithLabel(self.connectFrame, "Password", 10, 20, 1, 2, 'guest')
 		# Row 2
 		# Queuename
-		self.queueEntry = entryWithLabel(self.connectFrame, "Username", 10, 20, 2, 0, 'test')
+		self.queueEntry = entryWithLabel(self.connectFrame, "Queuename", 10, 20, 2, 0, 'test')
 		self.exchangeEntry = entryWithLabel(self.connectFrame, "Exchange", 10, 20, 2, 2, '')
 		self.routingKeyEntry = entryWithLabel(self.connectFrame, "Routing key", 10, 20, 2, 4, 'test')
 
@@ -429,6 +429,7 @@ class MainWindow:
 			self.addResult("Browsed message (%d bytes), %d left in queue\n" % ( len(self.body), self.method_frame.message_count) )	
 		else:
 			self.addResult("Could not get message from queue, queue empty.\n")
+			self.onEndBrowse()
 
 	# Browse next
 	def onBrowseNext(self):
