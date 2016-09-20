@@ -6,7 +6,7 @@
 # 
 # RMQMsgTool is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
-# Free Software Foundation,version 2 of the License.
+# Free Software Foundation,version 3 of the License.
 # 
 # RMQMsgTool is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -378,9 +378,29 @@ class MainWindow:
 	 			virtual_host=self.vhostEntry.get(),
     			credentials=pika.credentials.PlainCredentials(self.userEntry.get(), self.pwdEntry.get()),
 			)
-		self.getConnection = pika.BlockingConnection(self.params)
+		try:
+			self.getConnection = pika.BlockingConnection(self.params)
+		except pika.exceptions.ConnectionClosed as e:
+			self.addResult( "ERR: Could not connect to host %s port %s\n" % ( self.hostEntry.get(), self.portEntry.get() ) )
+			return
+		except pika.exceptions.ProbableAuthenticationError as e:
+			self.addResult( "ERR: Could not connect, wrong credentials\n")
+			return			
+		except pika.exceptions.ProbableAccessDeniedError as e:
+			self.addResult( "ERR: Could not connect, wrong vhost or authorization error\n")
+			return			
+		except:
+			self.addResult("ERR: Unexpected error\n" )
+			return
+
 		self.channel = self.getConnection.channel()
-		self.method_frame, properties, body = self.channel.basic_get(self.queueEntry.get())
+		
+		try:
+			self.method_frame, properties, body = self.channel.basic_get(self.queueEntry.get())
+		except pika.exceptions.ChannelClosed as e:
+			self.addResult("ERR: Could not get message. Error %s - %s\n" % (e.args[0], e.args[1]) )
+			return
+			
 		if self.method_frame:
 			# I've got a message, save it and let's present it
 			self.body = body
@@ -395,14 +415,10 @@ class MainWindow:
 
 			self.addResult("Got message (%d bytes), %d left in queue\n" % ( len(self.body), self.method_frame.message_count) )	
 		else:
-			self.addResult("Could not get message from queue, queue empty?\n")
+			self.addResult("Could not get message from queue, queue empty.\n")
 		
 	# Start Browse
 	def onStartBrowse(self):
-
-		# Do so we can't mix Get and Browse
-		self.get.config(state=DISABLED)
-		self.startBrowse.config(state=DISABLED)
 
 		# Set up connection
 		self.params = pika.ConnectionParameters(
@@ -411,12 +427,29 @@ class MainWindow:
 	 			virtual_host=self.vhostEntry.get(),
     			credentials=pika.credentials.PlainCredentials(self.userEntry.get(), self.pwdEntry.get()),
 			)
-		self.getBrowseConnection = pika.BlockingConnection(self.params)
+
+		try:
+			self.getBrowseConnection = pika.BlockingConnection(self.params)
+		except pika.exceptions.ConnectionClosed as e:
+			self.addResult( "ERR: Could not connect to host %s port %s\n" % ( self.hostEntry.get(), self.portEntry.get() ) )
+			return
+		except pika.exceptions.ProbableAuthenticationError as e:
+			self.addResult( "ERR: Could not connect, wrong credentials\n")
+			return				
+		except pika.exceptions.ProbableAccessDeniedError as e:
+			self.addResult( "ERR: Could not connect, wrong vhost or authorization error\n")
+			return			
+
 		self.browseChannel = self.getBrowseConnection.channel()
 		self.browseChannel.tx_select()
 
 		# Browse message
-		self.method_frame, properties, body = self.browseChannel.basic_get(self.queueEntry.get())
+		try:
+			self.method_frame, properties, body = self.browseChannel.basic_get(self.queueEntry.get())
+		except pika.exceptions.ChannelClosed as e:
+			self.addResult("ERR: Could not get message. Error %s - %s\n" % (e.args[0], e.args[1]) )
+			return
+			
 		if self.method_frame:
 			# I've got a message, let's present it
 			self.body = body
@@ -426,6 +459,11 @@ class MainWindow:
 
 			# Inform user
 			self.addResult("Browsed message (%d bytes), %d left in queue\n" % ( len(self.body), self.method_frame.message_count) )	
+
+			# Disable Get and Browse to reduce the possibility of mixups
+			self.get.config(state=DISABLED)
+			self.startBrowse.config(state=DISABLED)
+
 		else:
 			self.addResult("Could not get message from queue, queue empty.\n")
 			self.onEndBrowse()
@@ -435,7 +473,12 @@ class MainWindow:
 		if hasattr(self, 'browseChannel'):
 			if self.browseChannel.is_open: 
 				# Browse next message
-				self.method_frame, properties, body = self.browseChannel.basic_get(self.queueEntry.get())
+				try:
+					self.method_frame, properties, body = self.browseChannel.basic_get(self.queueEntry.get())
+				except pika.exceptions.ChannelClosed as e:
+					self.addResult("ERR: Could not get message. Error %s - %s\n" % (e.args[0], e.args[1]) )
+					self.onEndBrowse()
+					return
 				if self.method_frame:
 					# I've got a message, let's present it
 					self.body = body
@@ -472,13 +515,27 @@ class MainWindow:
 	 			virtual_host=self.vhostEntry.get(),
     			credentials=pika.credentials.PlainCredentials(self.userEntry.get(), self.pwdEntry.get()),
 			)
-		self.getConnection = pika.BlockingConnection(self.params)
+		try:
+			self.getConnection = pika.BlockingConnection(self.params)
+		except pika.exceptions.ConnectionClosed as e:
+			self.addResult( "ERR: Could not connect to host %s port %s\n" % ( self.hostEntry.get(), self.portEntry.get() ) )
+			return
+		except pika.exceptions.ProbableAuthenticationError as e:
+			self.addResult( "ERR: Could not connect, wrong credentials\n")
+			return
+		except pika.exceptions.ProbableAccessDeniedError as e:
+			self.addResult( "ERR: Could not connect, wrong vhost or authorization error\n")
+			return			
 		self.channel = self.getConnection.channel()
 		self.updateHeader()
 
 		# Publish to what's configured
-		self.channel.basic_publish(exchange=self.exchangeEntry.get(), routing_key=self.routingKeyEntry.get(), body = self.body, properties = self.properties )
-		self.channel.close()
+		try:
+			self.channel.basic_publish(exchange=self.exchangeEntry.get(), routing_key=self.routingKeyEntry.get(), body = self.body, properties = self.properties )
+			self.channel.close()
+		except pika.exceptions.ChannelClosed as e:
+			self.addResult("ERR: Could not put message. Error %s - %s\n" % (e.args[0], e.args[1]) )
+			return
 		self.getConnection.close()
 		self.addResult("Message posted (%d bytes).\n" % len(self.body) )
 
