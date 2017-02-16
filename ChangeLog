@@ -1,2 +1,8 @@
+Change log
+===========
 
 
+v0.2 - fredrik - Copy to clipboard button
+				 Smaller body text area, since my laptop has a smaller screen and the mainwindow doesn't handle resize... :-(
+
+v0.1 - fredrik - Initial release with Get, Browse and Load/Save body/Save message.

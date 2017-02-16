@@ -73,6 +73,9 @@ will be presented instead.
 **JSON** - The data is presented in JSON. An effort is made to indent the data using the standard
 json library. If the data is not recognized as JSON an error message will be presented instead. 
 
+**Copy** - This button copies the body content to the system clipboard. It is unknown how this will
+work with large amount of data. 
+
 ### Actions
 
 Here are a number of buttons for various actions.

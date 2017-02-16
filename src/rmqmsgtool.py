@@ -29,6 +29,7 @@ import zipfile
 
 
 FILTER=''.join([(len(repr(chr(x)))==3) and chr(x) or '.' for x in range(256)])
+
 def hexdump2(src):
 	result=[]
 	for i in xrange(0, len(src), 16):
@@ -67,19 +68,19 @@ def entryWithLabel(inParent, text, lwidth, ewidth, row, column, defval):
 	myEntry.insert(END, defval)
 	return myEntry
 
-class MainWindow:
+class MainWindow():
+	def __init__(self, master, **kw):
 
-	def __init__(self, master):
-
+		self.master = master
 		# Here we set up the main window
-		master.title("RMQMsgTool v0.1")
+		self.master.title("RMQMsgTool v0.2")
 
 		# Pre-defines
 		self.properties = pika.BasicProperties()
 		self.body = ''	
 		vcmd = (master.register(self.valNum), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
 		
-		# User interface setup starts heretest
+		# User interface setup starts here
 		#
 		# connectFrame with connection details
 		self.connectFrame = LabelFrame(master, text = "Connection details", width=150)
@@ -137,18 +138,25 @@ class MainWindow:
 		self.headerField.config(state=DISABLED)
 		
 		# bodyFrame with the message body
+
+		# Column 0 + 1, message bdoy text field and scrollbar
 		self.bodyFrame = LabelFrame(master, text = "Message body")
 		self.bodyFrame.grid(row = 2, sticky=W+E)
 
 		self.bodyScroll = Scrollbar(self.bodyFrame)	
-		self.bodyField = Text(self.bodyFrame, height=30, width=100, yscrollcommand=self.bodyScroll.set)
+		self.bodyField = Text(self.bodyFrame, height=20, width=100, yscrollcommand=self.bodyScroll.set)
 		self.bodyScroll.config(command=self.bodyField.yview)
 		self.bodyField.grid(row=0, column=0)
 		self.bodyScroll.grid(row=0, column=1, sticky=N+S+W+E)
 		self.bodyField.config(state=DISABLED)
+
+		# Column 2, the Parse seletor 
+
+		self.bodyCol2Frame = Frame(self.bodyFrame)
+		self.bodyCol2Frame.grid(row=0, column=2, sticky=N)
 		
-		self.bPresFrame = LabelFrame(self.bodyFrame, text = "Parse as")
-		self.bPresFrame.grid(row=0, column=2, sticky=N)
+		self.bPresFrame = LabelFrame(self.bodyCol2Frame, text = "Parse as")
+		self.bPresFrame.grid(row=0, column=0, sticky=N)
 
 		self.radioVal = StringVar()
 		self.rbt = Radiobutton(self.bPresFrame, text="Text", variable=self.radioVal, value="text", command=self.setBody )
@@ -160,6 +168,9 @@ class MainWindow:
 		self.rbx.pack(anchor=W)
 		self.rbj = Radiobutton(self.bPresFrame, text="JSON", variable=self.radioVal, value="JSON", command=self.setBody )
 		self.rbj.pack(anchor=W)
+
+		self.copyToClipButton = Button(self.bodyCol2Frame, text = "Copy", command=self.onCopy ) 
+		self.copyToClipButton.grid(row = 1, column = 0, sticky=N)
 
 		# actionFrame with all the fun buttons
 		self.actionFrame = LabelFrame(master, text = "Actions")
@@ -208,7 +219,10 @@ class MainWindow:
 				return False
 		else:
 			return True	
-		
+
+	def onCopy(self):
+		self.master.clipboard_clear()
+		self.master.clipboard_append(self.body)		
 		
 	# Ugly header management
 	#
