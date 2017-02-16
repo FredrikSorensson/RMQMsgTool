@@ -39,7 +39,7 @@ The GUI is divided in 5 parts:
 
 ### Connection details
 
-Here are all the usual conenction details. Not that you configure queues to read from
+Here are all the usual conenction details. *Note* that you configure queues to read from
 and exchanges to publish to separately.
 
 ### Message headers
