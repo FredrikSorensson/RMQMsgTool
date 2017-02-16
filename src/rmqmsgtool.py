@@ -2,7 +2,7 @@
 # -*- Mode: Python; coding: utf-8; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- 
 #
 # rmqmsgtool.py
-# Copyright (C) 2016 Fredrik Sörensson <fredrik@sorensson.se>
+# Copyright (C) 2016, 2017 Fredrik Sörensson <fredrik@sorensson.se>
 # 
 # RMQMsgTool is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
